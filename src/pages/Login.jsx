@@ -31,14 +31,24 @@ const Login = () => {
 
       const response = await axios.post('http://localhost/api/login.php', formData);
 
-    if (response.data.success) {
+ if (response.data.success) {
   const pref = response.data.preference || 'both';
+
+  // Map backend fields to frontend fields
+  const userData = {
+    ...response.data.user,
+    address: response.data.user.default_address || "",
+    location: response.data.user.default_location || "Butwal",
+  };
+
   localStorage.setItem('token', response.data.token);
   localStorage.setItem('preference', pref.toLowerCase());
-  localStorage.setItem('user', JSON.stringify(response.data.user));
+  localStorage.setItem('user', JSON.stringify(userData));
   localStorage.setItem('user_id', response.data.user.id);
- navigate('/dashboard/menu');
+
+  navigate('/dashboard/menu');
 }
+
 
  else {
         setLoginError(response.data.message || 'Invalid credentials');

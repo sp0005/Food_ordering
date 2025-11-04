@@ -12,17 +12,18 @@ const AdminDashboard = () => {
 
   const [stats, setStats] = useState({
     total_orders: 0,
-    pending_orders: 0,
-    approved_orders: 0,
+    active_orders: 0,
+    delivered_orders: 0,
+    cancelled_orders: 0,
     total_sales: 0,
   });
 
+  // Redirect to admin login if no token
   useEffect(() => {
-    if (!token) {
-      navigate("/admin-login");
-    }
-  }, [navigate, token]);
+    if (!token) navigate("/admin-login");
+  }, [token, navigate]);
 
+  // Fetch stats from backend
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -33,15 +34,17 @@ const AdminDashboard = () => {
       }
     };
 
-    // Fetch initially
     fetchStats();
-
-    // Live update every 5 seconds
     const interval = setInterval(fetchStats, 5000);
-    return () => clearInterval(interval); // Clean up on unmount
+    return () => clearInterval(interval);
   }, []);
 
   const isDashboardRoot = location.pathname === "/admin-dashboard";
+
+  // Navigate to AdminOrders with filter
+  const handleNavigate = (status) => {
+    navigate("/admin-dashboard/orders", { state: { filterStatus: status } });
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -59,25 +62,47 @@ const AdminDashboard = () => {
 
               {/* Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded-lg shadow">
+                <div
+                  onClick={() => handleNavigate("All")}
+                  className="cursor-pointer bg-white p-6 rounded-lg shadow hover:shadow-lg transition"
+                >
                   <h2 className="text-lg font-medium text-gray-600">Total Orders</h2>
                   <p className="mt-2 text-2xl font-bold text-gray-900">{stats.total_orders}</p>
                 </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h2 className="text-lg font-medium text-gray-600">Pending Orders</h2>
-                  <p className="mt-2 text-2xl font-bold text-yellow-600">{stats.pending_orders}</p>
+
+                <div
+                  onClick={() => handleNavigate("Active")}
+                  className="cursor-pointer bg-white p-6 rounded-lg shadow hover:shadow-lg transition"
+                >
+                  <h2 className="text-lg font-medium text-gray-600">Active Orders</h2>
+                  <p className="mt-2 text-2xl font-bold text-yellow-600">{stats.active_orders}</p>
                 </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h2 className="text-lg font-medium text-gray-600">Approved Orders</h2>
-                  <p className="mt-2 text-2xl font-bold text-green-600">{stats.approved_orders}</p>
+
+                <div
+                  onClick={() => handleNavigate("Delivered")}
+                  className="cursor-pointer bg-white p-6 rounded-lg shadow hover:shadow-lg transition"
+                >
+                  <h2 className="text-lg font-medium text-gray-600">Delivered Orders</h2>
+                  <p className="mt-2 text-2xl font-bold text-green-600">{stats.delivered_orders}</p>
                 </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h2 className="text-lg font-medium text-gray-600">Total Sales</h2>
-                  <p className="mt-2 text-2xl font-bold text-blue-600">Rs {stats.total_sales}</p>
+
+                <div
+                  onClick={() => handleNavigate("Cancelled")}
+                  className="cursor-pointer bg-white p-6 rounded-lg shadow hover:shadow-lg transition"
+                >
+                  <h2 className="text-lg font-medium text-gray-600">Cancelled Orders</h2>
+                  <p className="mt-2 text-2xl font-bold text-red-600">{stats.cancelled_orders}</p>
                 </div>
+              </div>
+
+              {/* Total Sales Card */}
+              <div className="mt-6 bg-white p-6 rounded-lg shadow flex items-center justify-between">
+                <h2 className="text-lg font-medium text-gray-600">Total Sales</h2>
+                <p className="text-2xl font-bold text-blue-600">Rs {stats.total_sales}</p>
               </div>
             </>
           )}
+
           <Outlet />
         </div>
       </div>

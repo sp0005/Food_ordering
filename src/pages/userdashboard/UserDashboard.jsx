@@ -29,7 +29,7 @@ const UserDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("cart");
-    localStorage.removeItem("user");
+    // localStorage.removeItem("user");
     setCart([]);
     navigate("/login");
   };

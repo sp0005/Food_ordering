@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 
 const API_URL = "http://localhost/api/orders/orders.php";
 
 const AdminOrders = () => {
+  const location = useLocation();
+  const { filterStatus: initialFilterStatus } = location.state || { filterStatus: "All" };
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterStatus, setFilterStatus] = useState(initialFilterStatus);
 
   const fetchOrders = async () => {
     try {
@@ -34,7 +38,6 @@ const AdminOrders = () => {
 
       await axios.post(API_URL, formData);
 
-      // Update the order status locally to immediately reflect change
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
           order.id === id ? { ...order, status } : order
@@ -45,10 +48,14 @@ const AdminOrders = () => {
     }
   };
 
+  // Filter orders based on selected status
   const filteredOrders =
     filterStatus === "All"
       ? orders
-      : orders.filter((order) => order.status === filterStatus);
+      : orders.filter((order) => {
+          if (filterStatus === "Active") return order.status === "Order Placed";
+          return order.status === filterStatus;
+        });
 
   if (loading)
     return <div className="text-center mt-10 text-lg">Loading...</div>;
@@ -71,9 +78,9 @@ const AdminOrders = () => {
             className="border rounded px-2 py-1"
           >
             <option value="All">All</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value="Active">Active</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
         </div>
       </div>
@@ -86,9 +93,6 @@ const AdminOrders = () => {
               <th className="py-3 px-4">User</th>
               <th className="py-3 px-4">Location</th>
               <th className="py-3 px-4">Address</th>
-              <th className="py-3 px-4">Payment</th>
-              <th className="py-3 px-4">Transaction Code</th>
-              <th className="py-3 px-4">Receipt</th>
               <th className="py-3 px-4">Items</th>
               <th className="py-3 px-4">Total</th>
               <th className="py-3 px-4">Status</th>
@@ -105,45 +109,6 @@ const AdminOrders = () => {
                   <td className="py-3 px-4">{order.location || "—"}</td>
                   <td className="py-3 px-4">{order.address || "—"}</td>
 
-                  {/* Payment Method */}
-                  <td className="py-3 px-4">
-                    <span
-                      className={`px-2 py-1 rounded text-sm font-medium ${
-                        order.payment_method === "Cash"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      {order.payment_method === "Cash"
-                        ? "Cash on Delivery"
-                        : "Online Payment"}
-                    </span>
-                  </td>
-
-                  <td className="py-3 px-4">{order.transaction_code || "—"}</td>
-
-                  <td className="py-3 px-4">
-                    {order.receipt_url ? (
-                      <a
-                        href={order.receipt_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <img
-                          src={order.receipt_url}
-                          alt="Receipt"
-                          className="w-16 h-16 object-cover rounded-md border"
-                        />
-                      </a>
-                    ) : (
-                      <span className="text-gray-500 italic">
-                        {order.payment_method === "Cash"
-                          ? "Cash Payment"
-                          : "No Receipt"}
-                      </span>
-                    )}
-                  </td>
-
                   <td className="py-3 px-4">
                     {order.items?.map((item, i) => (
                       <div key={i}>
@@ -153,15 +118,15 @@ const AdminOrders = () => {
                   </td>
 
                   <td className="py-3 px-4 font-semibold">
-                    Rs{Number(order.total).toFixed(2)}
+                    Rs {Number(order.total).toFixed(2)}
                   </td>
 
                   <td className="py-3 px-4">
                     <span
                       className={`px-3 py-1 rounded-full text-sm ${
-                        order.status === "Approved"
+                        order.status === "Delivered"
                           ? "bg-green-100 text-green-700"
-                          : order.status === "Rejected"
+                          : order.status === "Cancelled"
                           ? "bg-red-100 text-red-700"
                           : "bg-yellow-100 text-yellow-700"
                       }`}
@@ -170,35 +135,30 @@ const AdminOrders = () => {
                     </span>
                   </td>
 
-                  {/* Actions */}
                   <td className="py-3 px-4 flex gap-2">
-                    {order.status === "Pending" ? (
+                    {order.status === "Order Placed" ? (
                       <>
                         <button
-                          onClick={() => updateOrderStatus(order.id, "Approved")}
-                          className="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700"
+                          onClick={() => updateOrderStatus(order.id, "Delivered")}
+                          className="bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition"
                         >
-                          Approve
+                          Deliver
                         </button>
                         <button
-                          onClick={() => updateOrderStatus(order.id, "Rejected")}
-                          className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
+                          onClick={() => updateOrderStatus(order.id, "Cancelled")}
+                          className="bg-red-700 text-white px-4 py-1 rounded hover:bg-red-800 transition"
                         >
-                          Reject
+                          Cancel
                         </button>
                       </>
-                    ) : (
-                      <span className="px-3 py-1 bg-gray-200 rounded-full text-gray-700 text-sm">
-                        Completed
-                      </span>
-                    )}
+                    ) : null}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td
-                  colSpan="11"
+                  colSpan="8"
                   className="text-center py-4 text-gray-500 italic"
                 >
                   No orders found

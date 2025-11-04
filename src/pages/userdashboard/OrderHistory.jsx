@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 
-const API_BASE = "http://localhost/api/orders";
+const API_URL = "http://localhost/api/orders/orders.php";
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(null);
   const { setCart } = useOutletContext();
-  const navigate = useNavigate();
 
-  const user_id = localStorage.getItem("user_id");
-
+  // Fetch user orders
   const fetchOrders = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/orders.php?user_id=${user_id}`);
+      const userId = localStorage.getItem("user_id");
+      const res = await axios.get(`${API_URL}?user_id=${userId}`);
       setOrders(res.data);
     } catch (err) {
       console.error("Error fetching orders:", err);
@@ -26,142 +24,149 @@ const OrderHistory = () => {
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 5000);
-    return () => clearInterval(interval);
-  }, [user_id]);
+  }, []);
 
-  const handleReorder = async (orderId) => {
-    try {
-      const res = await axios.get(`${API_BASE}/get_order_items.php?order_id=${orderId}`);
-
-      if (res.data.success && Array.isArray(res.data.items)) {
-        const reorderedItems = res.data.items.map((item) => ({
-          id: item.menu_item_id,
-          name: item.name,
-          price: parseFloat(item.price),
-          quantity: parseInt(item.quantity),
-          image: item.image,
-        }));
-
-        setCart(reorderedItems);
-        navigate("/dashboard/cart");
-      } else {
-        alert("No items found for reorder.");
-      }
-    } catch (error) {
-      console.error("Reorder error:", error);
-      alert("Error reordering items.");
-    }
-  };
-
-  const getStatusColor = (status) => {
+  // Status color
+  const getStatusStyle = (status) => {
     switch (status) {
-      case "Approved":
-        return "text-green-700 bg-green-100";
-      case "Rejected":
-        return "text-red-700 bg-red-100";
+      case "Delivered":
+        return "bg-green-100 text-green-700";
+      case "Cancelled":
+        return "bg-red-100 text-red-700";
       default:
-        return "text-yellow-700 bg-yellow-100";
+        return "bg-yellow-100 text-yellow-700";
     }
   };
 
-  if (loading) {
-    return <p className="text-center mt-10 text-gray-500">Loading orders...</p>;
-  }
+  // Check if order can be cancelled (5 minutes)
+  const canCancel = (createdAt) => {
+    if (!createdAt) return false;
+    const orderTime = new Date(createdAt).getTime();
+    const now = Date.now();
+    const diffMinutes = (now - orderTime) / 1000 / 60;
+    return diffMinutes <= 5;
+  };
 
-  if (!orders || orders.length === 0) {
-    return <p className="text-center mt-10 text-gray-500">No orders found.</p>;
-  }
+  // Handle reorder
+  const handleReorder = (items) => {
+    const reorderedItems = items
+      .filter(item => item.menu_item_id) // only valid items
+      .map((item, index) => ({
+        id: `${item.menu_item_id}-${index}`,
+        menu_item_id: item.menu_item_id,
+        name: item.name,
+        price: parseFloat(item.price),
+        quantity: parseInt(item.quantity),
+        image: item.image || "", // fallback
+      }));
+    setCart(reorderedItems);
+  };
+
+  // Handle cancel order
+  const handleCancel = async (orderId) => {
+    try {
+      const formData = new FormData();
+      formData.append("action", "update_status");
+      formData.append("id", orderId);
+      formData.append("status", "Cancelled");
+
+      await axios.post(API_URL, formData);
+      fetchOrders();
+    } catch (err) {
+      alert("Failed to cancel order!");
+    }
+  };
+
+  if (loading)
+    return <div className="text-center mt-10 text-lg">Loading orders...</div>;
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6">
-      <h2 className="text-2xl sm:text-3xl font-semibold text-gray-800 mb-6 text-center">
-        My Order History
-      </h2>
+    <div className="min-h-screen p-6 bg-gray-50">
+      <h2 className="text-3xl font-bold text-center mb-8">My Orders</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {orders.map((order) => (
-          <div
-            key={order.id}
-            className="border rounded-2xl shadow-sm hover:shadow-md transition bg-white p-4 flex flex-col"
-          >
-            {/* Show receipt only for Online payments */}
-            {order.payment_method === "Online" && order.receipt ? (
-              <div
-                className="cursor-pointer relative group rounded-lg overflow-hidden"
-                onClick={() =>
-                  setSelectedImage(
-                    `http://localhost/api/orders/uploads/${order.receipt}`
-                  )
-                }
-              >
-                <img
-                  src={`http://localhost/api/orders/uploads/${order.receipt}`}
-                  alt="Receipt"
-                  className="w-full h-48 sm:h-56 object-cover rounded-lg"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                  <span className="text-white font-semibold text-sm sm:text-base">
-                    View Receipt
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-48 sm:h-56 bg-gray-50 rounded-lg text-gray-400 text-sm">
-                {order.payment_method === "Cash"
-                  ? "Cash on Delivery"
-                  : "No Receipt"}
-              </div>
-            )}
-
-            <div className="mt-4 text-sm sm:text-base text-gray-700 space-y-1">
-              <p>
-                <strong>Transaction Code:</strong> {order.transaction_code}
-              </p>
-              <p>
-                <strong>Payment Method:</strong> {order.payment_method || "Online"}
-              </p>
-              <p>
-                <strong>Date:</strong> {order.created_at}
-              </p>
-
-              <p
-                className={`mt-2 inline-block px-3 py-1 rounded-full font-semibold ${getStatusColor(
-                  order.status
-                )}`}
-              >
-                {order.status}
-              </p>
-
-              <button
-                onClick={() => handleReorder(order.id)}
-                className="mt-4 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl font-semibold transition w-full"
-              >
-                Reorder
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Image Modal */}
-      {selectedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-4 relative max-w-3xl w-full mx-auto">
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-3 right-3 text-gray-600 hover:text-red-600 text-2xl font-bold"
+      <div className="space-y-6">
+        {orders.length > 0 ? (
+          orders.map((order) => (
+            <div
+              key={order.id}
+              className="bg-white p-5 rounded-2xl shadow-md hover:shadow-lg transition"
             >
-              ✕
-            </button>
-            <img
-              src={selectedImage}
-              alt="Full Receipt"
-              className="max-h-[80vh] w-full object-contain rounded-lg"
-            />
-          </div>
-        </div>
-      )}
+              <div className="flex justify-between items-center mb-3">
+                <div>
+                  <p className="font-semibold text-lg">
+                    {order.created_at
+                      ? new Date(order.created_at).toLocaleString()
+                      : "Order Date"}
+                  </p>
+                  <p className="text-gray-500 text-sm">Order ID: {order.id}</p>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusStyle(
+                    order.status
+                  )}`}
+                >
+                  {order.status}
+                </span>
+              </div>
+
+              {/* Items list */}
+              <div className="border-t border-gray-200 pt-3 space-y-2 max-h-36 overflow-y-auto">
+                {order.items?.map((item, i) => (
+                  <div key={`${item.menu_item_id}-${i}`} className="flex justify-between items-center text-sm">
+                    <div className="flex items-center space-x-2">
+                      {item.image && (
+                        <img
+                          src={`http://localhost/api/uploads/${item.image}`}
+                          alt={item.name}
+                          className="w-10 h-10 object-cover rounded"
+                        />
+                      )}
+                      <span>{item.name} × {item.quantity}</span>
+                    </div>
+                    <span>Rs {item.price}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-gray-200 pt-3 mt-3 flex justify-between items-center">
+                <span className="font-semibold">Total:</span>
+                <span className="font-bold">Rs {Number(order.total).toFixed(2)}</span>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                {/* Cancel button for first 5 minutes */}
+                {order.status === "Order Placed" && (
+                  <button
+                    onClick={() => handleCancel(order.id)}
+                    disabled={!canCancel(order.created_at)}
+                    className={`flex-1 py-2 rounded-xl font-semibold transition ${
+                      canCancel(order.created_at)
+                        ? "bg-red-500 hover:bg-red-600 text-white"
+                        : "bg-gray-300 text-gray-600 cursor-not-allowed"
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                )}
+
+                {/* Reorder button only after Delivered */}
+                {order.status === "Delivered" && (
+                  <button
+                    onClick={() => handleReorder(order.items)}
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-xl font-semibold transition"
+                  >
+                    Reorder
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-500 mt-10">
+            You haven’t placed any orders yet.
+          </p>
+        )}
+      </div>
     </div>
   );
 };
