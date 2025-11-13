@@ -142,7 +142,7 @@ const AdminOrders = () => {
                           onClick={() => updateOrderStatus(order.id, "Delivered")}
                           className="bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition"
                         >
-                          Deliver
+                          Delivered
                         </button>
                         <button
                           onClick={() => updateOrderStatus(order.id, "Cancelled")}
