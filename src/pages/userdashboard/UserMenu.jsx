@@ -18,16 +18,15 @@ const UserMenu = () => {
         const res = await axios.get(API_URL);
         let menuItems = Array.isArray(res.data) ? res.data : [];
 
-        // Filter by preference if selected
-        const preference =
-          localStorage.getItem("preference")?.toLowerCase() || "both";
+        const user = JSON.parse(localStorage.getItem("user"));
+        const preference = user?.food_preference?.toLowerCase() || "both";
+
         if (preference !== "both") {
           menuItems = menuItems.filter(
             (item) => item.preference.toLowerCase() === preference
           );
         }
 
-        // Sort popular items first
         menuItems.sort((a, b) => (b.popular ? 1 : 0) - (a.popular ? 1 : 0));
 
         setMenus(menuItems);

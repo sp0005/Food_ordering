@@ -11,8 +11,18 @@ const REVENUE_API = "http://localhost/api/reports/revenue.php";
 const ReportsAdmin = () => {
   const [users, setUsers] = useState([]);
   const [topItems, setTopItems] = useState([]);
-  const [userStats, setUserStats] = useState({ daily: 0, weekly: 0, monthly: 0, yearly: 0 });
-  const [revenueStats, setRevenueStats] = useState({ daily: 0, weekly: 0, monthly: 0, yearly: 0 });
+  const [userStats, setUserStats] = useState({
+    daily: 0,
+    weekly: 0,
+    monthly: 0,
+    yearly: 0,
+  });
+  const [revenueStats, setRevenueStats] = useState({
+    daily: 0,
+    weekly: 0,
+    monthly: 0,
+    yearly: 0,
+  });
 
   const fetchUsers = async () => {
     try {
@@ -39,10 +49,21 @@ const ReportsAdmin = () => {
   const fetchTopItems = async () => {
     try {
       const res = await axios.get(TOP_ITEMS_API);
-      setTopItems(res.data);
+      // Filter out items with 0 total_quantity
+      const filtered = (res.data.top_items || []).filter(
+        (item) => item.total_quantity > 0
+      );
+
+      // Sort by total_quantity descending and take top 4
+      const top4 = filtered
+        .sort((a, b) => b.total_quantity - a.total_quantity)
+        .slice(0, 4);
+
+      setTopItems(top4);
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch top items");
+      setTopItems([]);
     }
   };
 
@@ -56,7 +77,7 @@ const ReportsAdmin = () => {
         daily: daily.data.count,
         weekly: weekly.data.count,
         monthly: monthly.data.count,
-        yearly: yearly.data.count
+        yearly: yearly.data.count,
       });
     } catch (err) {
       console.error(err);
@@ -73,7 +94,7 @@ const ReportsAdmin = () => {
         daily: daily.data.total,
         weekly: weekly.data.total,
         monthly: monthly.data.total,
-        yearly: yearly.data.total
+        yearly: yearly.data.total,
       });
     } catch (err) {
       console.error(err);
@@ -138,17 +159,21 @@ const ReportsAdmin = () => {
           <p className="text-2xl">Rs {revenueStats.yearly || 0}</p>
         </div>
       </div>
-
-      {/* Top Items */}
-      <h2 className="text-2xl font-bold mb-4">Top Selling Items</h2>
+      {/* top items */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {topItems.map((item, idx) => (
-          <div key={idx} className="p-4 bg-white rounded shadow">
-            <h3 className="font-semibold">{item.name}</h3>
-            <p>Quantity Sold: {item.total_quantity}</p>
-            <p>Total Sales: Rs {item.total_sales}</p>
+        {topItems.length > 0 ? (
+          topItems.map((item, idx) => (
+            <div key={idx} className="p-4 bg-white rounded shadow">
+              <h3 className="font-semibold">{item.name}</h3>
+              <p>Quantity Sold: {item.total_quantity}</p>
+              <p>Total Sales: Rs {item.total_sales}</p>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-3 p-4 text-center text-gray-500 bg-white rounded shadow">
+            No top items available.
           </div>
-        ))}
+        )}
       </div>
 
       {/* User List */}

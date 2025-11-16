@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const API_URL = "http://localhost/api/update_profile.php";
 
@@ -15,7 +15,6 @@ const Profile = () => {
   });
 
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -44,6 +43,7 @@ const Profile = () => {
 
     try {
       setLoading(true);
+
       const response = await axios.post(API_URL, {
         id: formData.id,
         name: formData.name,
@@ -51,13 +51,22 @@ const Profile = () => {
       });
 
       if (response.data.success) {
-        toast.success("Profile updated successfully!");
+        toast.success("Profile Updated! ✔");
 
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-        setTimeout(() => {
-          navigate("/login");
-        }, 1500);
+        // Update localStorage instantly
+        const updatedUser = {
+          ...JSON.parse(localStorage.getItem("user")),
+          name: formData.name,
+          food_preference: formData.foodPreference,
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+
+        // Update form state instantly
+        setFormData({
+          ...formData,
+          name: updatedUser.name,
+          foodPreference: updatedUser.food_preference,
+        });
       } else {
         toast.error(response.data.message || "Failed to update profile.");
       }
@@ -71,43 +80,46 @@ const Profile = () => {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 px-4">
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="colored"
+      />
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Profile
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email (Non-editable) */}
+          {/* Email */}
           <div>
-            <label className="block text-gray-600 font-medium mb-1">
-              Email
-            </label>
+            <label className="block text-gray-600 font-medium mb-1">Email</label>
             <input
               type="email"
-              name="email"
               value={formData.email}
               disabled
               className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
 
+          {/* Phone */}
           <div>
-            <label className="block text-gray-600 font-medium mb-1">
-              Phone Number
-            </label>
+            <label className="block text-gray-600 font-medium mb-1">Phone Number</label>
             <input
               type="text"
-              name="phone"
               value={formData.phone}
               disabled
               className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
             />
           </div>
 
+          {/* Name */}
           <div>
-            <label className="block text-gray-600 font-medium mb-1">
-              Name
-            </label>
+            <label className="block text-gray-600 font-medium mb-1">Name</label>
             <input
               type="text"
               name="name"
@@ -115,20 +127,17 @@ const Profile = () => {
               onChange={handleChange}
               placeholder="Enter your name"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring focus:ring-orange-300"
-              required
             />
           </div>
 
+          {/* Food Preference */}
           <div>
-            <label className="block text-gray-600 font-medium mb-1">
-              Food Preference
-            </label>
+            <label className="block text-gray-600 font-medium mb-1">Food Preference</label>
             <select
               name="foodPreference"
               value={formData.foodPreference}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring focus:ring-orange-300"
-              required
             >
               <option value="both">Both</option>
               <option value="veg">Veg</option>
@@ -136,6 +145,7 @@ const Profile = () => {
             </select>
           </div>
 
+          {/* Submit button */}
           <button
             type="submit"
             disabled={loading}
