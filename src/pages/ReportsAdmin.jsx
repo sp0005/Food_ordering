@@ -123,19 +123,19 @@ const ReportsAdmin = () => {
       {/* User Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="p-4 bg-blue-100 rounded shadow text-center">
-          <p className="text-lg font-semibold">Daily Users</p>
+          <p className="text-lg font-semibold">Today Register Users</p>
           <p className="text-2xl">{userStats.daily}</p>
         </div>
         <div className="p-4 bg-green-100 rounded shadow text-center">
-          <p className="text-lg font-semibold">Weekly Users</p>
+          <p className="text-lg font-semibold">Last Week Users</p>
           <p className="text-2xl">{userStats.weekly}</p>
         </div>
         <div className="p-4 bg-yellow-100 rounded shadow text-center">
-          <p className="text-lg font-semibold">Monthly Users</p>
+          <p className="text-lg font-semibold">Last Month Users</p>
           <p className="text-2xl">{userStats.monthly}</p>
         </div>
         <div className="p-4 bg-red-100 rounded shadow text-center">
-          <p className="text-lg font-semibold">Yearly Users</p>
+          <p className="text-lg font-semibold">Last Year Users</p>
           <p className="text-2xl">{userStats.yearly}</p>
         </div>
       </div>
@@ -143,19 +143,19 @@ const ReportsAdmin = () => {
       {/* Revenue Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="p-4 bg-blue-200 rounded shadow text-center">
-          <p className="text-lg font-semibold">Daily Revenue</p>
+          <p className="text-lg font-semibold">Today Revenue</p>
           <p className="text-2xl">Rs {revenueStats.daily || 0}</p>
         </div>
         <div className="p-4 bg-green-200 rounded shadow text-center">
-          <p className="text-lg font-semibold">Weekly Revenue</p>
+          <p className="text-lg font-semibold">Last Week Revenue</p>
           <p className="text-2xl">Rs {revenueStats.weekly || 0}</p>
         </div>
         <div className="p-4 bg-yellow-200 rounded shadow text-center">
-          <p className="text-lg font-semibold">Monthly Revenue</p>
+          <p className="text-lg font-semibold">Last Month Revenue</p>
           <p className="text-2xl">Rs {revenueStats.monthly || 0}</p>
         </div>
         <div className="p-4 bg-red-200 rounded shadow text-center">
-          <p className="text-lg font-semibold">Yearly Revenue</p>
+          <p className="text-lg font-semibold">Last Year Revenue</p>
           <p className="text-2xl">Rs {revenueStats.yearly || 0}</p>
         </div>
       </div>
