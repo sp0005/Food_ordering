@@ -6,11 +6,12 @@ const API_URL = "http://localhost/api/orders/orders.php";
 
 const AdminOrders = () => {
   const location = useLocation();
-  const { filterStatus: initialFilterStatus } = location.state || { filterStatus: "All" };
+  const { filterStatus: initialFilterStatus } = location.state || {
+    filterStatus: "All",
+  };
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState(initialFilterStatus);
 
   const fetchOrders = async () => {
     try {
@@ -29,7 +30,79 @@ const AdminOrders = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const updateOrderStatus = async (id, status) => {
+  const getDeliveryCharge = (location) => {
+    if (!location) return 0;
+    const charges = {
+      Butwal: 100,
+      Tilottama: 100,
+      Sainamaina: 150,
+      Bhairawa: 150,
+    };
+    return charges[location] || 0;
+  };
+
+  const printBill = (order) => {
+    const deliveryCharge = getDeliveryCharge(order.location);
+    const totalWithDelivery = Number(order.total) + deliveryCharge;
+
+    const itemsHtml = order.items
+      .map(
+        (item) => `<tr>
+          <td>${item.name}</td>
+          <td>${item.quantity}</td>
+          <td>Rs ${item.price}</td>
+        </tr>`
+      )
+      .join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>Bill - FoodHub</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h2 { text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <h2>FoodHub - Bill</h2>
+          <p><strong>User:</strong> ${order.user_name}</p>
+          <p><strong>Location:</strong> ${order.location}</p>
+          <p><strong>Address:</strong> ${order.address}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+              <tr>
+                <td colspan="2"><strong>Delivery Charge</strong></td>
+                <td>Rs ${deliveryCharge}</td>
+              </tr>
+              <tr>
+                <td colspan="2"><strong>Total</strong></td>
+                <td>Rs ${totalWithDelivery}</td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const newWindow = window.open("", "_blank");
+    newWindow.document.write(html);
+    newWindow.document.close();
+    newWindow.print();
+  };
+
+  const updateOrderStatus = async (id, status, orderForPrint = null) => {
     try {
       const formData = new FormData();
       formData.append("action", "update_status");
@@ -43,19 +116,16 @@ const AdminOrders = () => {
           order.id === id ? { ...order, status } : order
         )
       );
+
+      if (status === "Delivered" && orderForPrint) {
+        printBill(orderForPrint);
+      }
     } catch (err) {
       alert("Failed to update order!");
     }
   };
 
-  // Filter orders based on selected status
-  const filteredOrders =
-    filterStatus === "All"
-      ? orders
-      : orders.filter((order) => {
-          if (filterStatus === "Active") return order.status === "Order Placed";
-          return order.status === filterStatus;
-        });
+  const filteredOrders = orders; // you can keep filter by status if needed
 
   if (loading)
     return <div className="text-center mt-10 text-lg">Loading...</div>;
@@ -65,25 +135,6 @@ const AdminOrders = () => {
       <h2 className="text-3xl font-bold text-center mb-6">
         Admin Orders Panel
       </h2>
-
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2">
-          <label htmlFor="statusFilter" className="font-medium">
-            Filter by Status:
-          </label>
-          <select
-            id="statusFilter"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="border rounded px-2 py-1"
-          >
-            <option value="All">All</option>
-            <option value="Active">Active</option>
-            <option value="Delivered">Delivered</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-        </div>
-      </div>
 
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white rounded-xl shadow-md">
@@ -136,22 +187,26 @@ const AdminOrders = () => {
                   </td>
 
                   <td className="py-3 px-4 flex gap-2">
-                    {order.status === "Order Placed" ? (
+                    {order.status === "Order Placed" && (
                       <>
                         <button
-                          onClick={() => updateOrderStatus(order.id, "Delivered")}
+                          onClick={() =>
+                            updateOrderStatus(order.id, "Delivered", order)
+                          }
                           className="bg-green-700 text-white px-4 py-1 rounded hover:bg-green-800 transition"
                         >
-                          Delivered
+                          Deliver
                         </button>
                         <button
-                          onClick={() => updateOrderStatus(order.id, "Cancelled")}
+                          onClick={() =>
+                            updateOrderStatus(order.id, "Cancelled")
+                          }
                           className="bg-red-700 text-white px-4 py-1 rounded hover:bg-red-800 transition"
                         >
                           Cancel
                         </button>
                       </>
-                    ) : null}
+                    )}
                   </td>
                 </tr>
               ))
